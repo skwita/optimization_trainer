@@ -7,11 +7,6 @@ class Task1(TaskBase):
     name = "ОТ-01"
 
     def load_variant(self, variant):
-
-        # можно потом сделать:
-        # if variant == 2: ...
-        # if variant == 3: ...
-
         sub1 = SubTask(
             title="Задача 1. (3 балла).",
             condition_elements=[

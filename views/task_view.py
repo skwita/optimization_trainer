@@ -1,6 +1,8 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import messagebox
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from core.checker import check_answer
 
 class TaskView(ttk.Frame):
@@ -34,10 +36,21 @@ class TaskView(ttk.Frame):
         content.grid(row=0, column=1, sticky="nsew")
         content.columnconfigure(0, weight=1)
 
-        # контейнер условия
-        self.condition_frame = ttk.Frame(content)
-        self.condition_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 20))
-        self.condition_frame.columnconfigure(0, weight=1)
+        canvas = ttk.Canvas(content)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(content, orient="vertical", command=canvas.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        self.condition_frame = ttk.Frame(canvas)
+
+        canvas.create_window((0, 0), window=self.condition_frame, anchor="nw")
+        self.condition_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        content.columnconfigure(0, weight=1)
+        content.rowconfigure(0, weight=1)
 
         # вопрос
         self.question = ttk.Label(content, text="", font=("Segoe UI", 14, "bold"), justify=LEFT, anchor="nw")
@@ -49,7 +62,7 @@ class TaskView(ttk.Frame):
         input_frame.columnconfigure(0, weight=1)
 
         self.entry = ttk.Entry(input_frame)
-        self.entry.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        self.entry.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
         ttk.Button(input_frame, text="Проверить", bootstyle=SUCCESS, command=self.check).grid(row=0, column=1)
 
@@ -108,9 +121,16 @@ class TaskView(ttk.Frame):
                     table.column(col, anchor="center", stretch=True)
                 for row in table_data["data"]:
                     table.insert("", "end", values=row)
-                table.grid(row=row_idx, column=0, sticky="ew", pady=10)
+                table.grid(row=row_idx, column=0, sticky="ew", pady=5)
                 row_idx += 1
-            # можно добавить картинки и графики в будущем
+            elif element["type"] == "formula":
+                self.render_formula(
+                    self.condition_frame,
+                    element["value"],
+                    row_idx
+                )
+
+                row_idx += 1
 
         # question
         q = st.questions[st.current_step]
@@ -153,3 +173,27 @@ class TaskView(ttk.Frame):
             self.question.config(wraplength=width)
         except:
             pass
+
+    def render_formula(self, parent, latex, row):
+
+        fig = plt.figure(figsize=(3, 0.3))
+        fig.patch.set_alpha(0)
+        fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+        plt.text(
+            0.5,
+            0.5,
+            f"${latex}$",
+            fontsize=12,
+            ha="center",
+            va="center"
+        )
+
+        plt.axis("off")
+
+        canvas = FigureCanvasTkAgg(fig, master=parent)
+        widget = canvas.get_tk_widget()
+
+        widget.grid(row=row, column=0, sticky="w", pady=5)
+
+        canvas.draw()
